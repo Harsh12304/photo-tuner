@@ -4,7 +4,7 @@ A modern, feature-rich image editing application built with Next.js 16 and React
 
 ## 🚀 Live Demo
 
-[**Try it now →**](#) _photo-tuner.vercel.app_
+[**Try it now →**](#) _https://photo-tuner.vercel.app/_
 
 📹 **[Watch Demo Video →](#)** _https://drive.google.com/file/d/1pnEVvQNnBX5ZuC6-9tyJvPR7rfucgMO8/view?usp=sharing_
 
