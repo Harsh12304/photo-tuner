@@ -12,6 +12,7 @@ import Header from '../../component/header/header'
 import Canvas from '../../component/canvas/canvas'
 import RightPanel from '../../component/rightPanel/rightPanel'
 import Toast from '../../component/toast/toast'
+import TextModal from '../../component/textModal/textModal'
 import useImageHistory from '../../hooks/useImageHistory'
 
 const ImageEditor = () => {
