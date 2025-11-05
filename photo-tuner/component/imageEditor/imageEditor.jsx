@@ -11,9 +11,7 @@ import { BiText } from 'react-icons/bi'
 import Header from '../../component/header/header'
 import Canvas from '../../component/canvas/canvas'
 import RightPanel from '../../component/rightPanel/rightPanel'
-import TextModal from '../../component/textModal/textModal'
 import Toast from '../../component/toast/toast'
-import AiPanel from '../../component/aiPanel/aiPanel'
 import useImageHistory from '../../hooks/useImageHistory'
 
 const ImageEditor = () => {
