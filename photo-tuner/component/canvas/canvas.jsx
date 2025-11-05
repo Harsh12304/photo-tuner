@@ -21,6 +21,7 @@ const Canvas = forwardRef(({
   const [isDrawing, setIsDrawing] = useState(false)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
   const [cropStart, setCropStart] = useState(null)
+  const [isCropping, setIsCropping] = useState(false)
   const [draggedText, setDraggedText] = useState(null)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [hoveredText, setHoveredText] = useState(null)
@@ -144,8 +145,11 @@ const Canvas = forwardRef(({
       clientY = e.clientY
     }
     
-    const x = clientX - rect.left
-    const y = clientY - rect.top
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    
+    const x = (clientX - rect.left) * scaleX
+    const y = (clientY - rect.top) * scaleY
     
     return { x, y }
   }
@@ -178,6 +182,34 @@ const Canvas = forwardRef(({
     }
     
     if (isCropMode) {
+      // FIXED: Check if user is clicking near existing crop area to extend it
+      if (cropArea) {
+        const threshold = 20 // 20 pixel threshold for edge detection
+        const nearLeft = Math.abs(x - cropArea.x) < threshold
+        const nearRight = Math.abs(x - (cropArea.x + cropArea.width)) < threshold
+        const nearTop = Math.abs(y - cropArea.y) < threshold
+        const nearBottom = Math.abs(y - (cropArea.y + cropArea.height)) < threshold
+        
+        // If near an edge, start extending from that edge
+        if (nearLeft || nearRight || nearTop || nearBottom) {
+          setIsCropping(true)
+          
+          // Set crop start based on which edge is being extended
+          if (nearLeft) {
+            setCropStart({ x: cropArea.x + cropArea.width, y: cropArea.y + (nearTop ? cropArea.height : (nearBottom ? 0 : cropArea.height / 2)) })
+          } else if (nearRight) {
+            setCropStart({ x: cropArea.x, y: cropArea.y + (nearTop ? cropArea.height : (nearBottom ? 0 : cropArea.height / 2)) })
+          } else if (nearTop) {
+            setCropStart({ x: cropArea.x + (nearLeft ? cropArea.width : (nearRight ? 0 : cropArea.width / 2)), y: cropArea.y + cropArea.height })
+          } else if (nearBottom) {
+            setCropStart({ x: cropArea.x + (nearLeft ? cropArea.width : (nearRight ? 0 : cropArea.width / 2)), y: cropArea.y })
+          }
+          return
+        }
+      }
+      
+      // Otherwise, start a new crop area
+      setIsCropping(true)
       setCropStart({ x, y })
     }
   }
@@ -191,7 +223,7 @@ const Canvas = forwardRef(({
     
     setMousePos({ x: Math.round(x), y: Math.round(y) })
     
-    // Update cursor light position - NO DELAY
+    // Update cursor light position
     setCursorLight({ x, y, show: true })
     
     const textAtPos = findTextAt(x, y)
@@ -224,7 +256,8 @@ const Canvas = forwardRef(({
       ctx.moveTo(x, y)
     }
     
-    if (cropStart && isCropMode) {
+    // FIXED: Update crop area when actively cropping
+    if (isCropping && cropStart && isCropMode) {
       const width = x - cropStart.x
       const height = y - cropStart.y
       
@@ -250,7 +283,11 @@ const Canvas = forwardRef(({
       onSaveState()
     }
     
-    setCropStart(null)
+    // FIXED: Only clear crop start and cropping state
+    if (isCropping) {
+      setIsCropping(false)
+      setCropStart(null)
+    }
   }
   
   const handleLeave = () => {
@@ -338,7 +375,7 @@ const Canvas = forwardRef(({
           </div>
         )}
 
-        {/* Light Mode: Ripple Effect - ULTRA FAST */}
+        {/* Light Mode: Ripple Effect */}
         {!isDarkMode && cursorLight.show && (
           <>
             <div 

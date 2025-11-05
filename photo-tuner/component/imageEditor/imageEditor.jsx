@@ -13,6 +13,7 @@ import Canvas from '../../component/canvas/canvas'
 import RightPanel from '../../component/rightPanel/rightPanel'
 import Toast from '../../component/toast/toast'
 import TextModal from '../../component/textModal/textModal'
+import ConfirmModal from '../../component/confirmModal/confirmModal'
 import useImageHistory from '../../hooks/useImageHistory'
 
 const ImageEditor = () => {
@@ -26,6 +27,8 @@ const ImageEditor = () => {
   const [texts, setTexts] = useState([])
   const [selectedTextId, setSelectedTextId] = useState(null)
   const [showTextModal, setShowTextModal] = useState(false)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [confirmModalData, setConfirmModalData] = useState({})
   const [notification, setNotification] = useState('')
   const [isDarkMode, setIsDarkMode] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
@@ -81,6 +84,24 @@ const ImageEditor = () => {
   const showNotification = (msg) => {
     setNotification(msg)
     setTimeout(() => setNotification(''), 3000)
+  }
+  
+  const showConfirm = (title, message, onConfirm, confirmText = 'Confirm', confirmColor = 'blue') => {
+    setConfirmModalData({ title, message, onConfirm, confirmText, confirmColor })
+    setShowConfirmModal(true)
+  }
+  
+  const handleConfirmModalConfirm = () => {
+    if (confirmModalData.onConfirm) {
+      confirmModalData.onConfirm()
+    }
+    setShowConfirmModal(false)
+    setConfirmModalData({})
+  }
+  
+  const handleConfirmModalCancel = () => {
+    setShowConfirmModal(false)
+    setConfirmModalData({})
   }
   
   const handleFileSelect = (e) => {
@@ -223,11 +244,19 @@ const ImageEditor = () => {
   
   const handleTextDelete = () => {
     if (selectedTextId) {
-      setTexts(prev => prev.filter(t => t.id !== selectedTextId))
-      setShowTextModal(false)
-      setSelectedTextId(null)
-      setTimeout(saveCanvasState, 100)
-      showNotification('Text deleted')
+      showConfirm(
+        'Delete Text',
+        'Are you sure you want to delete this text?',
+        () => {
+          setTexts(prev => prev.filter(t => t.id !== selectedTextId))
+          setShowTextModal(false)
+          setSelectedTextId(null)
+          setTimeout(saveCanvasState, 100)
+          showNotification('Text deleted')
+        },
+        'Delete',
+        'red'
+      )
     }
   }
   
@@ -254,21 +283,27 @@ const ImageEditor = () => {
   }
   
   const handleClearSession = () => {
-    if (window.confirm('Are you sure you want to clear the current session?')) {
-      setImage(null)
-      setTexts([])
-      setRotation(0)
-      setActiveTool('select')
-      setCropArea(null)
-      setIsCropMode(false)
-      
-      // Clear localStorage
-      localStorage.removeItem('imageEditor_image')
-      localStorage.removeItem('imageEditor_rotation')
-      localStorage.removeItem('imageEditor_texts')
-      
-      showNotification('Session cleared!')
-    }
+    showConfirm(
+      'Clear Session',
+      'Are you sure you want to clear the current session? All unsaved changes will be lost.',
+      () => {
+        setImage(null)
+        setTexts([])
+        setRotation(0)
+        setActiveTool('select')
+        setCropArea(null)
+        setIsCropMode(false)
+        
+        // Clear localStorage
+        localStorage.removeItem('imageEditor_image')
+        localStorage.removeItem('imageEditor_rotation')
+        localStorage.removeItem('imageEditor_texts')
+        
+        showNotification('Session cleared!')
+      },
+      'Clear Session',
+      'red'
+    )
   }
   
   const tools = [
@@ -278,58 +313,6 @@ const ImageEditor = () => {
     { id: 'draw', icon: HiOutlinePencil, label: 'Draw' },
     { id: 'text', icon: BiText, label: 'Text', onClick: handleAddText },
   ]
-  // AI Command Handler
-const handleAiCommand = useCallback((result) => {
-  const { action, value } = result
-  
-  switch (action) {
-    case 'rotate':
-      if (typeof value === 'number') {
-        setRotation(prev => (prev + value) % 360)
-        setTimeout(() => saveCanvasState(), 100)
-        showNotification(`Rotated ${value}°`)
-      }
-      break
-      
-    case 'crop':
-      startCropMode()
-      showNotification('Crop mode activated - draw a rectangle')
-      break
-      
-    case 'text':
-      setSelectedTextId(null)
-      setShowTextModal(true)
-      showNotification('Opening text editor')
-      break
-      
-    case 'draw':
-      setActiveTool('draw')
-      if (value?.color) {
-        const colorMap = {
-          'red': '#EF4444',
-          'green': '#10B981',
-          'blue': '#3B82F6',
-          'yellow': '#F59E0B',
-          'black': '#000000',
-          'white': '#FFFFFF'
-        }
-        setBrushColor(colorMap[value.color.toLowerCase()] || brushColor)
-      }
-      showNotification('Draw mode activated')
-      break
-      
-    case 'brightness':
-      showNotification('Brightness adjustment coming soon!')
-      break
-      
-    case 'resize':
-      showNotification('Resize feature coming soon!')
-      break
-      
-    default:
-      showNotification('Command not recognized')
-  }
-}, [brushColor, saveCanvasState, showNotification])
   
   return (
     <div className="flex flex-col h-screen bg-background-light dark:bg-background-dark">
@@ -344,6 +327,17 @@ const handleAiCommand = useCallback((result) => {
       
       {/* Toast Notification */}
       <Toast message={notification} show={!!notification} />
+      
+      {/* Confirm Modal */}
+      <ConfirmModal
+        show={showConfirmModal}
+        title={confirmModalData.title}
+        message={confirmModalData.message}
+        onConfirm={handleConfirmModalConfirm}
+        onCancel={handleConfirmModalCancel}
+        confirmText={confirmModalData.confirmText}
+        confirmColor={confirmModalData.confirmColor}
+      />
       
       {/* Header Component */}
       <Header
@@ -489,13 +483,8 @@ const handleAiCommand = useCallback((result) => {
           onDelete={selectedTextId ? handleTextDelete : null}
         />
       )}
-       {/* AI Panel
-      <AiPanel 
-        onCommand={handleAiCommand}
-        hasImage={!!image}
-      /> */}
     </div>
   )
 }
 
-export default ImageEditor;
+export default ImageEditor
